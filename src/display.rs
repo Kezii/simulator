@@ -99,11 +99,25 @@ impl<C: PixelColor> SimulatorDisplay<C> {
     /// Calculates the rendered size of this display based on the output settings.
     ///
     /// This method takes into account the [`scale`](OutputSettings::scale) and
-    /// [`pixel_spacing`](OutputSettings::pixel_spacing) settings to determine
-    /// the size of this display in output pixels.
+    /// [`pixel_spacing`](OutputSettings::pixel_spacing) settings as well as the
+    /// [`pixel_aspect_ratio`](OutputSettings::pixel_aspect_ratio) setting to
+    /// determine the size of this display in output pixels.
     pub fn output_size(&self, output_settings: &OutputSettings) -> Size {
-        self.size * output_settings.scale
-            + self.size.saturating_sub(Size::new_equal(1)) * output_settings.pixel_spacing
+        let pixel_size = Size::new(
+            output_settings
+                .scale
+                .saturating_mul(output_settings.pixel_aspect_ratio.width),
+            output_settings
+                .scale
+                .saturating_mul(output_settings.pixel_aspect_ratio.height),
+        );
+
+        let width = self.size.width.saturating_mul(pixel_size.width)
+            + self.size.width.saturating_sub(1) * output_settings.pixel_spacing;
+        let height = self.size.height.saturating_mul(pixel_size.height)
+            + self.size.height.saturating_sub(1) * output_settings.pixel_spacing;
+
+        Size::new(width, height)
     }
 }
 

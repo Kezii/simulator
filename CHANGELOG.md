@@ -6,6 +6,10 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- Added pixel aspect ratio support to render non-square pixels
+
 ## [0.8.0] - 2025-10-10
 
 ### Added

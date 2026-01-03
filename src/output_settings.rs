@@ -1,6 +1,35 @@
 use crate::theme::BinaryColorTheme;
 use embedded_graphics::prelude::*;
 
+/// Pixel aspect ratio.
+///
+/// The aspect ratio is given as `width:height` and is applied to the output pixel size.
+/// A value of `1:1` represents square pixels.
+///
+/// The aspect ratio scales the pixel size in the simulator output. For example, using
+/// `pixel_aspect_ratio(2, 1)` will render pixels twice as wide as they are tall.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct PixelAspectRatio {
+    /// Pixel width ratio component.
+    pub width: u32,
+    /// Pixel height ratio component.
+    pub height: u32,
+}
+
+impl PixelAspectRatio {
+    /// Creates a new pixel aspect ratio.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `width` or `height` is `0`.
+    pub const fn new(width: u32, height: u32) -> Self {
+        assert!(width > 0, "pixel aspect ratio width must be > 0");
+        assert!(height > 0, "pixel aspect ratio height must be > 0");
+
+        Self { width, height }
+    }
+}
+
 /// Output settings.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct OutputSettings {
@@ -8,6 +37,8 @@ pub struct OutputSettings {
     pub scale: u32,
     /// Spacing between pixels.
     pub pixel_spacing: u32,
+    /// Pixel aspect ratio.
+    pub pixel_aspect_ratio: PixelAspectRatio,
     /// Binary color theme.
     pub theme: BinaryColorTheme,
 }
@@ -15,13 +46,24 @@ pub struct OutputSettings {
 #[cfg(feature = "with-sdl")]
 impl OutputSettings {
     /// Translates a output coordinate to the corresponding display coordinate.
-    pub(crate) const fn output_to_display(&self, output_point: Point) -> Point {
-        let pitch = self.pixel_pitch() as i32;
-        Point::new(output_point.x / pitch, output_point.y / pitch)
+    pub(crate) fn output_to_display(&self, output_point: Point) -> Point {
+        let pitch = self.pixel_pitch();
+        Point::new(output_point.x / pitch.x, output_point.y / pitch.y)
     }
 
-    pub(crate) const fn pixel_pitch(&self) -> u32 {
-        self.scale + self.pixel_spacing
+    pub(crate) fn pixel_size(&self) -> Size {
+        Size::new(
+            self.scale.saturating_mul(self.pixel_aspect_ratio.width),
+            self.scale.saturating_mul(self.pixel_aspect_ratio.height),
+        )
+    }
+
+    pub(crate) fn pixel_pitch(&self) -> Point {
+        let pixel_size = self.pixel_size();
+        Point::new(
+            (pixel_size.width + self.pixel_spacing) as i32,
+            (pixel_size.height + self.pixel_spacing) as i32,
+        )
     }
 }
 
@@ -36,6 +78,7 @@ impl Default for OutputSettings {
 pub struct OutputSettingsBuilder {
     scale: Option<u32>,
     pixel_spacing: Option<u32>,
+    pixel_aspect_ratio: PixelAspectRatio,
     theme: BinaryColorTheme,
 }
 
@@ -94,12 +137,32 @@ impl OutputSettingsBuilder {
         self
     }
 
+    /// Sets the pixel aspect ratio.
+    ///
+    /// The aspect ratio is given as `width:height`. A value of `1:1` represents square pixels.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `width` or `height` is `0`.
+    pub fn pixel_aspect_ratio(mut self, width: u32, height: u32) -> Self {
+        self.pixel_aspect_ratio = PixelAspectRatio::new(width, height);
+
+        self
+    }
+
     /// Builds the output settings.
     pub fn build(self) -> OutputSettings {
         OutputSettings {
             scale: self.scale.unwrap_or(1),
             pixel_spacing: self.pixel_spacing.unwrap_or(0),
+            pixel_aspect_ratio: self.pixel_aspect_ratio,
             theme: self.theme,
         }
+    }
+}
+
+impl Default for PixelAspectRatio {
+    fn default() -> Self {
+        Self::new(1, 1)
     }
 }

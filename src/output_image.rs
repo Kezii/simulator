@@ -64,7 +64,16 @@ where
         )
         .unwrap();
 
-        if output_settings.scale == 1 {
+        let pixel_size = Size::new(
+            output_settings
+                .scale
+                .saturating_mul(output_settings.pixel_aspect_ratio.width),
+            output_settings
+                .scale
+                .saturating_mul(output_settings.pixel_aspect_ratio.height),
+        );
+
+        if pixel_size == Size::new(1, 1) && output_settings.pixel_spacing == 0 {
             display
                 .bounding_box()
                 .points()
@@ -78,8 +87,8 @@ where
                 .draw(self)
                 .unwrap();
         } else {
-            let pixel_pitch = (output_settings.scale + output_settings.pixel_spacing) as i32;
-            let pixel_size = Size::new(output_settings.scale, output_settings.scale);
+            let pitch_x = (pixel_size.width + output_settings.pixel_spacing) as i32;
+            let pitch_y = (pixel_size.height + output_settings.pixel_spacing) as i32;
 
             for p in display.bounding_box().points() {
                 let raw_color = display.get_pixel(p).into();
@@ -87,7 +96,10 @@ where
                 let output_color = C::from(themed_color);
 
                 self.fill_solid(
-                    &Rectangle::new(p * pixel_pitch + position, pixel_size),
+                    &Rectangle::new(
+                        Point::new(p.x * pitch_x, p.y * pitch_y) + position,
+                        pixel_size,
+                    ),
                     output_color,
                 )
                 .unwrap();
