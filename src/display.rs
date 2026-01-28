@@ -102,7 +102,7 @@ impl<C: PixelColor> SimulatorDisplay<C> {
     /// [`pixel_spacing`](OutputSettings::pixel_spacing) settings to determine
     /// the size of this display in output pixels.
     pub fn output_size(&self, output_settings: &OutputSettings) -> Size {
-        self.size * output_settings.scale
+        self.size.component_mul(output_settings.scale)
             + self.size.saturating_sub(Size::new_equal(1)) * output_settings.pixel_spacing
     }
 }

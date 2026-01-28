@@ -6,6 +6,14 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- **(breaking)** [#71](https://github.com/embedded-graphics/simulator/pull/71) Added support for non-square pixels.
+
+### Fixed
+
+- [#71](https://github.com/embedded-graphics/simulator/pull/71) Fixed pixel spacing for unscaled outputs.
+
 ## [0.8.0] - 2025-10-10
 
 ### Added

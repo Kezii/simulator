@@ -4,24 +4,26 @@ use embedded_graphics::prelude::*;
 /// Output settings.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct OutputSettings {
-    /// Pixel scale.
-    pub scale: u32,
+    /// Pixel scale, allowing for non-square pixels.
+    pub scale: Size,
     /// Spacing between pixels.
     pub pixel_spacing: u32,
     /// Binary color theme.
     pub theme: BinaryColorTheme,
 }
 
-#[cfg(feature = "with-sdl")]
 impl OutputSettings {
     /// Translates a output coordinate to the corresponding display coordinate.
+    #[cfg(feature = "with-sdl")]
     pub(crate) const fn output_to_display(&self, output_point: Point) -> Point {
-        let pitch = self.pixel_pitch() as i32;
-        Point::new(output_point.x / pitch, output_point.y / pitch)
+        output_point.component_div(self.pixel_pitch())
     }
 
-    pub(crate) const fn pixel_pitch(&self) -> u32 {
-        self.scale + self.pixel_spacing
+    pub(crate) const fn pixel_pitch(&self) -> Point {
+        Point::new(
+            (self.scale.width + self.pixel_spacing) as i32,
+            (self.scale.height + self.pixel_spacing) as i32,
+        )
     }
 }
 
@@ -34,7 +36,7 @@ impl Default for OutputSettings {
 /// Output settings builder.
 #[derive(Default)]
 pub struct OutputSettingsBuilder {
-    scale: Option<u32>,
+    scale: Option<Size>,
     pixel_spacing: Option<u32>,
     theme: BinaryColorTheme,
 }
@@ -54,6 +56,22 @@ impl OutputSettingsBuilder {
     /// Panics if the scale is set to `0`.
     pub fn scale(mut self, scale: u32) -> Self {
         assert!(scale > 0, "scale must be > 0");
+
+        self.scale = Some(Size::new(scale, scale));
+
+        self
+    }
+
+    /// Sets a non-square pixel scale.
+    ///
+    /// This is useful for simulating a display with a non-square pixel aspect ratio.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `width` or `height` is `0`.
+    pub fn scale_non_square(mut self, scale: Size) -> Self {
+        assert!(scale.width > 0, "width must be > 0");
+        assert!(scale.height > 0, "height must be > 0");
 
         self.scale = Some(scale);
 
@@ -77,7 +95,7 @@ impl OutputSettingsBuilder {
     pub fn theme(mut self, theme: BinaryColorTheme) -> Self {
         self.theme = theme;
 
-        self.scale.get_or_insert(3);
+        self.scale.get_or_insert(Size::new_equal(3));
         self.pixel_spacing.get_or_insert(1);
 
         self
@@ -97,7 +115,7 @@ impl OutputSettingsBuilder {
     /// Builds the output settings.
     pub fn build(self) -> OutputSettings {
         OutputSettings {
-            scale: self.scale.unwrap_or(1),
+            scale: self.scale.unwrap_or(Size::new_equal(1)),
             pixel_spacing: self.pixel_spacing.unwrap_or(0),
             theme: self.theme,
         }
